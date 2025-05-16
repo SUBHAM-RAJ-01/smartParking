@@ -1,0 +1,57 @@
+# Required Arduino Libraries for Smart Parking System
+
+The following libraries are required for the RFID-based parking system.
+Install them using the Arduino Library Manager (Sketch > Include Library > Manage Libraries).
+
+## Required Libraries:
+
+1. MFRC522 - by GithubCommunity (for RFID reader)
+   - Version: 1.4.10 or newer
+
+2. Adafruit GFX Library - by Adafruit (for OLED display)
+   - Version: 1.11.5 or newer
+
+3. Adafruit SSD1306 - by Adafruit (for OLED display)
+   - Version: 2.5.7 or newer
+
+4. ArduinoJson - by Benoit Blanchon (for JSON parsing)
+   - Version: 6.21.3 or newer
+   - Note: Version 6.x is required, not version 5.x
+
+5. ESP8266WiFi - included with ESP8266 board manager
+   - Make sure ESP8266 board support is installed
+
+6. ESP8266HTTPClient - included with ESP8266 board manager
+   - Make sure ESP8266 board support is installed
+
+7. Servo - included with Arduino IDE
+   - Standard library
+
+8. SPI - included with Arduino IDE
+   - Standard library
+
+9. Wire - included with Arduino IDE
+   - Standard library
+
+## Installing ESP8266 Board Support:
+
+1. Open Arduino IDE
+2. Go to File > Preferences
+3. In "Additional Boards Manager URLs" add: http://arduino.esp8266.com/stable/package_esp8266com_index.json
+4. Click OK
+5. Go to Tools > Board > Boards Manager
+6. Search for "esp8266" and install "ESP8266 by ESP8266 Community"
+7. Select "Generic ESP8266 Module" from Tools > Board menu
+
+## Hardware Requirements:
+
+- Arduino Uno
+- ESP8266 WiFi module (ESP-01)
+- MFRC522 RFID reader module
+- RFID tags/cards (13.56MHz)
+- SSD1306 OLED display (128x64, I2C)
+- Micro servo motor
+- IR sensor
+- Jumper wires
+- Breadboard
+- 5V power supply 

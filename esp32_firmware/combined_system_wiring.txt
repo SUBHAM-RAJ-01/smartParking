@@ -1,0 +1,95 @@
+# Arduino Uno R4 WiFi Combined System - Wiring Diagram
+
+```
+                                 +---------------------+
+                                 |                     |
+                                 |    Arduino Uno      |
+                                 |       R4 WiFi       |
+                                 |                     |
+                   +------------+|3.3V             VIN |
+                   |             |                     |
+                   |   +---------+|GND              GND |----------------+
+                   |   |          |                     |                |
+                   |   |   +------+|A5(SCL)          D13|------+         |
+                   |   |   |       |                     |      |         |
+                   |   |   |  +----+|A4(SDA)          D12|------+---------+
+                   |   |   |  |     |                     |      |         |
+                   |   |   |  |     |                  D11|------+         |
+ +-----------------+   |   |  |     |                     |                |
+ |                     |   |  |     |                  D10|----------------+
+ |    +----------------+   |  |     |                     |                |
+ |    |                    |  |     |                   D9|----------------+
+ |    |    +---------------+  |     |                     |                |
+ |    |    |                  |     |                   D8|----------------+
+ |    |    |    +--------------+    |                     |                |
+ |    |    |    |                   |                   D7|----------------+
+ |    |    |    |                   |                     |                |
+ |    |    |    |                   |                   D6|--------+       |
+ |    |    |    |                   |                     |        |       |
+ |    |    |    |                   |                   D5|-----+  |       |
+ |    |    |    |                   |                     |     |  |       |
+ |    |    |    |                   |                   D4|--+  |  |       |
+ |    |    |    |                   |                     |  |  |  |       |
+ |    |    |    |                   |                   D3|--+  |  |       |
+ |    |    |    |                   |                     |     |  |       |
+ |    |    |    |                   |                     |     |  |       |
+ |    |    |    |                   |                     |     |  |       |
+ v    v    v    v                   v                     v     v  v       v
++----------+   +----------+    +----------+         +----+ +----+ +----+ +----+
+|          |   |          |    |          |         |    | |    | |    | |    |
+| OLED     |   | RFID     |    | RFID     |         | IR | |SERVO| | IR | |SERVO|
+| Display  |   | Reader   |    | Reader   |         |Entry| |Entry| |Exit| |Exit|
+| (I2C)    |   | (Entry)  |    | (Exit)   |         |    | |    | |    | |    |
++----------+   +----------+    +----------+         +----+ +----+ +----+ +----+
+
+```
+
+## Detailed Pin Connections
+
+### OLED Display (I2C):
+- VCC → Arduino 3.3V
+- GND → Arduino GND
+- SDA → Arduino A4 (SDA)
+- SCL → Arduino A5 (SCL)
+
+### Entry RFID Reader:
+- 3.3V → Arduino 3.3V
+- GND → Arduino GND
+- RST → Arduino D9
+- MISO → Arduino D12
+- MOSI → Arduino D11
+- SCK → Arduino D13
+- SDA(SS) → Arduino D10
+
+### Exit RFID Reader:
+- 3.3V → Arduino 3.3V
+- GND → Arduino GND
+- RST → Arduino D7
+- MISO → Arduino D12
+- MOSI → Arduino D11
+- SCK → Arduino D13
+- SDA(SS) → Arduino D8
+
+### IR Sensor (Entry):
+- VCC → Arduino 5V (from VIN)
+- GND → Arduino GND
+- OUT → Arduino D4
+
+### IR Sensor (Exit):
+- VCC → Arduino 5V (from VIN)
+- GND → Arduino GND
+- OUT → Arduino D6
+
+### Servo Motor (Entry):
+- VCC → Arduino 5V (preferably external power)
+- GND → Arduino GND
+- Signal → Arduino D3
+
+### Servo Motor (Exit):
+- VCC → Arduino 5V (preferably external power)
+- GND → Arduino GND
+- Signal → Arduino D5
+
+## Power Supply Note
+
+For reliable operation of both servo motors, it is recommended to use an external 5V power supply for the servos instead of powering them directly from the Arduino. Connect the power supply's ground to the Arduino's ground to maintain a common reference. 

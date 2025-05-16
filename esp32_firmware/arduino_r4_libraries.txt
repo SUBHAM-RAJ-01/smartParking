@@ -1,0 +1,63 @@
+# Required Arduino Libraries for Smart Parking System with Arduino Uno R4 WiFi
+
+The following libraries are required for the RFID-based parking system using Arduino Uno R4 WiFi.
+Install them using the Arduino Library Manager (Sketch > Include Library > Manage Libraries).
+
+## Required Libraries:
+
+1. MFRC522 - by GithubCommunity (for RFID reader)
+   - Version: 1.4.10 or newer
+
+2. Adafruit GFX Library - by Adafruit (for OLED display)
+   - Version: 1.11.5 or newer
+
+3. Adafruit SSD1306 - by Adafruit (for OLED display)
+   - Version: 2.5.7 or newer
+
+4. ArduinoJson - by Benoit Blanchon (for JSON parsing)
+   - Version: 6.21.3 or newer
+   - Note: Version 6.x is required, not version 5.x
+
+5. ArduinoHttpClient - by Arduino (for HTTP requests)
+   - Version: 0.5.0 or newer
+
+6. WiFiS3 - included with Arduino UNO R4 WiFi board support
+   - This is automatically included with the Arduino UNO R4 WiFi board package
+
+7. Servo - included with Arduino IDE
+   - Standard library
+
+8. SPI - included with Arduino IDE
+   - Standard library
+
+9. Wire - included with Arduino IDE
+   - Standard library
+
+## Installing Arduino Uno R4 WiFi Board Support:
+
+1. Open Arduino IDE
+2. Go to Tools > Board > Boards Manager
+3. Search for "Arduino UNO R4" and install the package
+4. Select "Arduino UNO R4 WiFi" from Tools > Board menu
+
+## Hardware Requirements:
+
+- Arduino Uno R4 WiFi
+- 2x MFRC522 RFID reader modules
+- 2x Micro servo motors
+- 2x IR sensors
+- 1x SSD1306 OLED display (128x64, I2C)
+- RFID tags/cards (13.56MHz)
+- Jumper wires
+- Breadboard
+- 5V power supply
+
+## Special Notes for Arduino Uno R4 WiFi:
+
+1. **WiFi Library**: The WiFiS3 library is specifically for the Arduino Uno R4 WiFi and differs from other WiFi libraries. Make sure you use the correct library and examples.
+
+2. **SPI Bus Management**: Since you're using two RFID readers on the same SPI bus, proper SS pin management is crucial. The code handles this by deactivating one reader while the other is in use.
+
+3. **Power Considerations**: The Arduino Uno R4 WiFi can provide enough power for the OLED and RFID readers, but servos might require additional power, especially when operating simultaneously.
+
+4. **Upgrading from Previous Setups**: If you're upgrading from the ESP32 or ESP8266-based setup, note that the WiFi API is different. The code has been updated accordingly. 
