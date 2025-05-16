@@ -1,6 +1,6 @@
 /*
  * Smart Parking System - Combined Entry/Exit Control
- * Arduino Uno R4 WiFi with RFID Integration (No Servo.h)
+ * Arduino Uno R4 WiFi with RFID Integration
  */
 
 #include <SPI.h>
@@ -13,12 +13,12 @@
 #include <ArduinoJson.h>
 
 // WiFi credentials
-const char* ssid = "iPhone";  // Change to your WiFi name
-const char* password = "qwertyuiop";  // Change to your WiFi password
+const char* ssid = "YOUR_WIFI_SSID";  // Change to your WiFi name
+const char* password = "YOUR_WIFI_PASSWORD";  // Change to your WiFi password
 
 // Backend server details
-const char* serverHost = "192.168.21.1";  // Change to your computer's local IP
-const int serverPort = 5000;
+const char* serverHost = "smartparking-9yf6.onrender.com";  // Updated backend URL
+const int serverPort = 443;  // HTTPS port
 const String serverPath = "/api/rfid";
 
 // Pin definitions
@@ -201,6 +201,7 @@ void processEntryVehicle() {
   processingEntryVehicle = true;
 
   String rfidTag = getRfidTag(entryRfid);
+  Serial.println("Entry RFID Tag: " + rfidTag);
 
   display.clearDisplay();
   display.setCursor(0, 0);
@@ -214,57 +215,97 @@ void processEntryVehicle() {
     String jsonPayload;
     serializeJson(doc, jsonPayload);
 
-    client.beginRequest();
-    client.post(serverPath + "/entry");
-    client.sendHeader("Content-Type", "application/json");
-    client.sendHeader("Content-Length", jsonPayload.length());
-    client.beginBody();
-    client.print(jsonPayload);
-    client.endRequest();
+    // Create HTTPS client with SSL
+    WiFiSSLClient sslClient;
+    HttpClient client(sslClient, serverHost, serverPort);
 
-    int statusCode = client.responseStatusCode();
-    String response = client.responseBody();
+    // Log request details
+    Serial.println("Sending request to: https://" + String(serverHost) + serverPath + "/entry");
+    Serial.println("Payload: " + jsonPayload);
 
-    if (statusCode == 200) {
-      DynamicJsonDocument respDoc(1024);
-      DeserializationError error = deserializeJson(respDoc, response);
+    // Add retry logic for connection
+    int retryCount = 0;
+    bool requestSuccess = false;
+    
+    while (!requestSuccess && retryCount < 3) {
+      client.beginRequest();
+      client.post(serverPath + "/entry");
+      client.sendHeader("Content-Type", "application/json");
+      client.sendHeader("Content-Length", jsonPayload.length());
+      client.beginBody();
+      client.print(jsonPayload);
+      client.endRequest();
 
-      if (!error) {
-        bool success = respDoc["success"];
-        if (success) {
-          String userName = respDoc["userName"];
-          int slotNumber = respDoc["slotNumber"];
+      int statusCode = client.responseStatusCode();
+      String response = client.responseBody();
 
-          display.clearDisplay();
-          display.setCursor(0, 0);
-          display.println("Welcome " + userName + "!");
-          display.println("Assigned slot: " + String(slotNumber));
-          display.println("Opening barrier...");
-          display.display();
+      // Log response details
+      Serial.println("Attempt " + String(retryCount + 1));
+      Serial.println("Status code: " + String(statusCode));
+      Serial.println("Response: " + response);
 
-          holdServo(ENTRY_SERVO_PIN, 90, 5000); // Open 5s
-          holdServo(ENTRY_SERVO_PIN, 0, 500);   // Close
+      if (statusCode > 0) {
+        requestSuccess = true;
+        if (statusCode == 200) {
+          DynamicJsonDocument respDoc(1024);
+          DeserializationError error = deserializeJson(respDoc, response);
+
+          if (!error) {
+            bool success = respDoc["success"];
+            if (success) {
+              String userName = respDoc["userName"];
+              int slotNumber = respDoc["slotNumber"];
+
+              display.clearDisplay();
+              display.setCursor(0, 0);
+              display.println("Welcome " + userName + "!");
+              display.println("Assigned slot: " + String(slotNumber));
+              display.println("Opening barrier...");
+              display.display();
+
+              holdServo(ENTRY_SERVO_PIN, 90, 5000); // Open 5s
+              holdServo(ENTRY_SERVO_PIN, 0, 500);   // Close
+            } else {
+              String errorMsg = respDoc["message"];
+              display.clearDisplay();
+              display.setCursor(0, 0);
+              display.println("Error:");
+              display.println(errorMsg);
+              display.display();
+              delay(3000);
+            }
+          } else {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.println("JSON Error:");
+            display.println(error.c_str());
+            display.display();
+            delay(3000);
+          }
         } else {
-          String errorMsg = respDoc["message"];
           display.clearDisplay();
           display.setCursor(0, 0);
-          display.println("Error:");
-          display.println(errorMsg);
+          display.println("Server Error:");
+          display.println("Code: " + String(statusCode));
+          display.println("Response:");
+          display.println(response.substring(0, 20));
           display.display();
           delay(3000);
         }
       } else {
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.println("JSON parsing error");
-        display.display();
-        delay(3000);
+        retryCount++;
+        if (retryCount < 3) {
+          Serial.println("Connection failed, retrying...");
+          delay(1000);
+        }
       }
-    } else {
+    }
+
+    if (!requestSuccess) {
       display.clearDisplay();
       display.setCursor(0, 0);
-      display.println("Server Error:");
-      display.println(statusCode);
+      display.println("Connection failed");
+      display.println("after 3 attempts");
       display.display();
       delay(3000);
     }
@@ -288,6 +329,7 @@ void processExitVehicle() {
   processingExitVehicle = true;
 
   String rfidTag = getRfidTag(exitRfid);
+  Serial.println("Exit RFID Tag: " + rfidTag);
 
   display.clearDisplay();
   display.setCursor(0, 0);
@@ -301,112 +343,111 @@ void processExitVehicle() {
     String jsonPayload;
     serializeJson(doc, jsonPayload);
 
-    client.beginRequest();
-    client.post(serverPath + "/exit");
-    client.sendHeader("Content-Type", "application/json");
-    client.sendHeader("Content-Length", jsonPayload.length());
-    client.beginBody();
-    client.print(jsonPayload);
-    client.endRequest();
+    // Create HTTPS client with SSL
+    WiFiSSLClient sslClient;
+    HttpClient client(sslClient, serverHost, serverPort);
 
-    int statusCode = client.responseStatusCode();
-    String response = client.responseBody();
+    // Log request details
+    Serial.println("Sending request to: https://" + String(serverHost) + serverPath + "/exit");
+    Serial.println("Payload: " + jsonPayload);
 
-    if (statusCode == 200) {
-      DynamicJsonDocument respDoc(1024);
-      DeserializationError error = deserializeJson(respDoc, response);
+    // Add retry logic for connection
+    int retryCount = 0;
+    bool requestSuccess = false;
+    
+    while (!requestSuccess && retryCount < 3) {
+      client.beginRequest();
+      client.post(serverPath + "/exit");
+      client.sendHeader("Content-Type", "application/json");
+      client.sendHeader("Content-Length", jsonPayload.length());
+      client.beginBody();
+      client.print(jsonPayload);
+      client.endRequest();
 
-      if (!error) {
-        bool success = respDoc["success"];
-        if (success) {
-          String userName = respDoc["userName"];
-          float parkingFee = respDoc["parkingFee"];
-          String parkingDuration = respDoc["parkingDuration"];
-          String paymentStatus = respDoc["paymentStatus"];
-          float walletBalance = respDoc["walletBalance"];
+      int statusCode = client.responseStatusCode();
+      String response = client.responseBody();
 
-          display.clearDisplay();
-          display.setCursor(0, 0);
-          display.println("User: " + userName);
-          display.println("Duration: " + parkingDuration);
-          display.println("Fee: $" + String(parkingFee, 2));
+      // Log response details
+      Serial.println("Attempt " + String(retryCount + 1));
+      Serial.println("Status code: " + String(statusCode));
+      Serial.println("Response: " + response);
 
-          if (paymentStatus == "PAID" || paymentStatus == "WALLET") {
-            display.println("Payment: SUCCESSFUL");
-            display.println("Wallet: $" + String(walletBalance, 2));
-            display.println("Opening barrier...");
-            display.display();
+      if (statusCode > 0) {
+        requestSuccess = true;
+        if (statusCode == 200) {
+          DynamicJsonDocument respDoc(1024);
+          DeserializationError error = deserializeJson(respDoc, response);
 
-            holdServo(EXIT_SERVO_PIN, 90, 5000); // Open 5s
-            holdServo(EXIT_SERVO_PIN, 0, 500);   // Close
-          } else {
-            display.println("Insufficient balance!");
-            display.println("Please add funds");
-            display.display();
+          if (!error) {
+            bool success = respDoc["success"];
+            if (success) {
+              String userName = respDoc["userName"];
+              float parkingFee = respDoc["parkingFee"];
+              String parkingDuration = respDoc["parkingDuration"];
+              String paymentStatus = respDoc["paymentStatus"];
+              float walletBalance = respDoc["walletBalance"];
 
-            bool paymentConfirmed = false;
-            int checkCount = 0;
-
-            while (!paymentConfirmed && checkCount < 30) {
-              delay(1000);
-              checkCount++;
-              client.beginRequest();
-              client.get(serverPath + "/payment-status/" + rfidTag);
-              client.endRequest();
-
-              int paymentStatusCode = client.responseStatusCode();
-              String paymentResponse = client.responseBody();
-
-              if (paymentStatusCode == 200) {
-                DynamicJsonDocument paymentDoc(256);
-                deserializeJson(paymentDoc, paymentResponse);
-
-                if (paymentDoc["paid"]) {
-                  paymentConfirmed = true;
-
-                  display.clearDisplay();
-                  display.setCursor(0, 0);
-                  display.println("Payment received!");
-                  display.println("Thank you!");
-                  display.println("Opening barrier...");
-                  display.display();
-
-                  holdServo(EXIT_SERVO_PIN, 90, 5000); // Open 5s
-                  holdServo(EXIT_SERVO_PIN, 0, 500);   // Close
-                }
-              }
-            }
-
-            if (!paymentConfirmed) {
               display.clearDisplay();
               display.setCursor(0, 0);
-              display.println("Payment timeout!");
-              display.println("Please try again");
+              display.println("User: " + userName);
+              display.println("Duration: " + parkingDuration);
+              display.println("Fee: $" + String(parkingFee, 2));
+
+              if (paymentStatus == "PAID" || paymentStatus == "WALLET") {
+                display.println("Payment: SUCCESSFUL");
+                display.println("Wallet: $" + String(walletBalance, 2));
+                display.println("Opening barrier...");
+                display.display();
+
+                holdServo(EXIT_SERVO_PIN, 90, 5000); // Open 5s
+                holdServo(EXIT_SERVO_PIN, 0, 500);   // Close
+              } else {
+                display.println("Insufficient balance!");
+                display.println("Please add funds");
+                display.display();
+                delay(3000);
+              }
+            } else {
+              String errorMsg = respDoc["message"];
+              display.clearDisplay();
+              display.setCursor(0, 0);
+              display.println("Error:");
+              display.println(errorMsg);
               display.display();
               delay(3000);
             }
+          } else {
+            display.clearDisplay();
+            display.setCursor(0, 0);
+            display.println("JSON Error:");
+            display.println(error.c_str());
+            display.display();
+            delay(3000);
           }
         } else {
-          String errorMsg = respDoc["message"];
           display.clearDisplay();
           display.setCursor(0, 0);
-          display.println("Error:");
-          display.println(errorMsg);
+          display.println("Server Error:");
+          display.println("Code: " + String(statusCode));
+          display.println("Response:");
+          display.println(response.substring(0, 20));
           display.display();
           delay(3000);
         }
       } else {
-        display.clearDisplay();
-        display.setCursor(0, 0);
-        display.println("JSON parsing error");
-        display.display();
-        delay(3000);
+        retryCount++;
+        if (retryCount < 3) {
+          Serial.println("Connection failed, retrying...");
+          delay(1000);
+        }
       }
-    } else {
+    }
+
+    if (!requestSuccess) {
       display.clearDisplay();
       display.setCursor(0, 0);
-      display.println("Server Error:");
-      display.println(statusCode);
+      display.println("Connection failed");
+      display.println("after 3 attempts");
       display.display();
       delay(3000);
     }
