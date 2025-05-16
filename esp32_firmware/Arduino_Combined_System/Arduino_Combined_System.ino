@@ -13,11 +13,11 @@
 #include <ArduinoJson.h>
 
 // WiFi credentials
-const char* ssid = "Galaxy S22";
-const char* password = "12345678";
+const char* ssid = "iPhone";  // Change to your WiFi name
+const char* password = "qwertyuiop";  // Change to your WiFi password
 
 // Backend server details
-const char* serverHost = "https://localhost:5000";
+const char* serverHost = "192.168.21.1";  // Change to your computer's local IP
 const int serverPort = 5000;
 const String serverPath = "/api/rfid";
 
