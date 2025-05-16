@@ -99,22 +99,31 @@ router.post('/exit', async (req, res) => {
       const transaction = new Transaction({
         user: user._id,
         amount: -parkingFee,
-        type: 'parking',
-        method: 'wallet'
+        type: 'deduct',
+        method: 'Parking'
       });
-      await transaction.save();
       
-      // Add transaction to user's transaction list
-      user.transactions.push(transaction._id);
-      await user.save();
-      
-      paymentStatus = 'WALLET';
-      
-      // Free up the slot
-      slot.occupied = false;
-      slot.vehicle = null;
-      slot.entryTime = null;
-      await slot.save();
+      try {
+        await transaction.save();
+        
+        // Add transaction to user's transaction list
+        user.transactions.push(transaction._id);
+        await user.save();
+        
+        paymentStatus = 'WALLET';
+        
+        // Free up the slot
+        slot.occupied = false;
+        slot.vehicle = null;
+        slot.entryTime = null;
+        await slot.save();
+      } catch (error) {
+        console.error('Error saving transaction:', error);
+        return res.status(500).json({
+          success: false,
+          message: 'Error processing payment'
+        });
+      }
     }
     
     // Return the response
@@ -166,7 +175,10 @@ router.post('/add-funds', async (req, res) => {
   try {
     const { rfid, amount } = req.body;
     
+    console.log('Add funds request:', { rfid, amount });
+    
     if (!rfid || !amount || amount <= 0) {
+      console.log('Invalid input:', { rfid, amount });
       return res.status(400).json({
         success: false,
         message: 'Invalid RFID or amount'
@@ -176,37 +188,92 @@ router.post('/add-funds', async (req, res) => {
     // Find user by RFID tag
     const user = await User.findOne({ rfidTag: rfid });
     if (!user) {
+      console.log('User not found for RFID:', rfid);
       return res.status(404).json({ 
         success: false, 
         message: 'User not found. Invalid RFID tag.' 
       });
     }
     
+    console.log('Current wallet balance:', user.wallet);
+    
     // Add funds to wallet
-    user.wallet += amount;
+    const oldBalance = user.wallet;
+    const amountToAdd = Number(amount);
+    user.wallet = oldBalance + amountToAdd;
+    console.log('New wallet balance:', user.wallet);
     
     // Create transaction record
     const transaction = new Transaction({
       user: user._id,
-      amount,
-      type: 'deposit',
+      amount: amountToAdd,
+      type: 'add',
       method: 'manual'
     });
-    await transaction.save();
     
-    // Add transaction to user's transaction list
-    user.transactions.push(transaction._id);
-    await user.save();
-    
-    return res.status(200).json({
-      success: true,
-      walletBalance: user.wallet
-    });
+    try {
+      // Save transaction first
+      const savedTransaction = await transaction.save();
+      console.log('Transaction saved:', savedTransaction);
+      
+      // Add transaction to user's transaction list
+      user.transactions.push(savedTransaction._id);
+      
+      // Save user with updated wallet and transactions
+      const savedUser = await user.save();
+      console.log('User saved with new balance:', savedUser.wallet);
+      
+      return res.status(200).json({
+        success: true,
+        walletBalance: savedUser.wallet,
+        oldBalance: oldBalance,
+        addedAmount: amountToAdd
+      });
+    } catch (error) {
+      console.error('Error in transaction/user save:', error);
+      // Revert wallet balance if transaction save fails
+      user.wallet = oldBalance;
+      await user.save();
+      return res.status(500).json({
+        success: false,
+        message: 'Error processing payment',
+        error: error.message
+      });
+    }
   } catch (error) {
     console.error('Error adding funds:', error);
     return res.status(500).json({
       success: false,
-      message: 'Server error adding funds'
+      message: 'Server error adding funds',
+      error: error.message
+    });
+  }
+});
+
+// Get wallet balance
+router.get('/wallet/:rfid', async (req, res) => {
+  try {
+    const { rfid } = req.params;
+    
+    const user = await User.findOne({ rfidTag: rfid });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    return res.status(200).json({
+      success: true,
+      walletBalance: user.wallet,
+      userName: user.name
+    });
+  } catch (error) {
+    console.error('Error getting wallet balance:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error getting wallet balance',
+      error: error.message
     });
   }
 });

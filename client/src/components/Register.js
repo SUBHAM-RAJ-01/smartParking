@@ -2,7 +2,12 @@ import React, { useState } from 'react';
 import API from '../api';
 
 export default function Register({ navigateTo }) {
-  const [form, setForm] = useState({ name: '', licensePlate: '', password: '' });
+  const [form, setForm] = useState({ 
+    name: '', 
+    licensePlate: '', 
+    password: '',
+    rfidTag: '' 
+  });
   const [msg, setMsg] = useState('');
   const [msgType, setMsgType] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -15,10 +20,15 @@ export default function Register({ navigateTo }) {
     setMsg('');
     
     try {
-      await API.post('/auth/register', form);
-      setMsg('Registration successful! You can now login.');
-      setMsgType('success');
-      setTimeout(() => navigateTo('login'), 2000);
+      const response = await API.post('/auth/register', form);
+      if (response.data.success) {
+        setMsg('Registration successful! You can now login.');
+        setMsgType('success');
+        setTimeout(() => navigateTo('login'), 2000);
+      } else {
+        setMsg(response.data.error || 'Registration failed. Please try again.');
+        setMsgType('error');
+      }
     } catch (err) {
       setMsg(err.response?.data?.error || 'Registration failed. Please try again.');
       setMsgType('error');
@@ -55,6 +65,21 @@ export default function Register({ navigateTo }) {
             onChange={handleChange} 
             required 
           />
+        </div>
+
+        <div className="form-group">
+          <label htmlFor="rfidTag">RFID Tag</label>
+          <input 
+            id="rfidTag"
+            name="rfidTag" 
+            placeholder="Enter your RFID tag number" 
+            value={form.rfidTag}
+            onChange={handleChange} 
+            required 
+          />
+          <small className="form-text">
+            This is the unique number on your RFID card or tag
+          </small>
         </div>
         
         <div className="form-group">

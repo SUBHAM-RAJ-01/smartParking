@@ -12,4 +12,11 @@
     "mongoose": "^6.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.0.0",
-    "helme
+    "helmet": "^5.0.0",
+    "jsonwebtoken": "^8.5.1",
+    "bcryptjs": "^2.4.3"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.15"
+  }
+} 
